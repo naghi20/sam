@@ -72,11 +72,12 @@ Resources:
                 credentials:
                   Fn::GetAtt: ApiGatewaySnsRole.Arn
                 requestTemplates:
-                  application/json: |
-                    {
-                      "TopicArn": "${OrderTopic.Arn}",
-                      "Message": "$util.escapeJavaScript($input.body)"
-                    }
+                  application/json:
+                    Fn::Sub: |
+                      {
+                        "TopicArn": "${OrderTopic}",
+                        "Message": "$util.escapeJavaScript($input.body)"
+                      }
                 responses:
                   default:
                     statusCode: 200
