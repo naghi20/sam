@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template to process frontend orders and store them in DynamoDB
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.9
+
+Resources:
+
+  OrderTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: OrderProcessingTopic
+
+  OrderTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: order_id
+          AttributeType: S
+        - AttributeName: total_price
+          AttributeType: N
+      KeySchema:
+        - AttributeName: order_id
+          KeyType: HASH
+        - AttributeName: total_price
+          KeyType: RANGE
+
+  OrderProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: OrderProcessorFunction
+      Handler: app.lambda_handler
+      CodeUri: order_processor/
+      Environment:
+        Variables:
+          ORDER_TABLE_NAME: !Ref OrderTable
+          EC2_PRIVATE_IP: ""  #If testing locally, value comes from env.json via --env-vars when performing sam local invoke
+      Timeout: 30
+      Policies:
+        - SNSCrudPolicy:
+            TopicName: !Ref OrderTopic
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrderTable
+      Events:
+        OrderSNSEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref OrderTopic
+
+  OrderApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: OrderApi
+      StageName: prod
+      DefinitionBody:
+        swagger: 2.0
+        info:
+          title: Order Service
+          version: 1.0
+        paths:
+          /checkout:
+            post:
+              x-amazon-apigateway-integration:
+                type: aws
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:sns:action/Publish
+                httpMethod: POST
+                credentials:
+                  Fn::GetAtt: ApiGatewaySnsRole.Arn
+                requestTemplates:
+                  application/json: |
+                    {
+                      "TopicArn": "${OrderTopic.Arn}",
+                      "Message": "$util.escapeJavaScript($input.body)"
+                    }
+                responses:
+                  default:
+                    statusCode: 200
+
+  ApiGatewaySnsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AllowSNSPublish
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref OrderTopic
+
+Outputs:
+  OrderTopicArn:
+    Description: SNS Topic ARN for order messages
+    Value: !Ref OrderTopic
+  OrderTableName:
+    Description: Name of the DynamoDB table used for storing orders
+    Value: !Ref OrderTable
+  OrderProcessorFunctionName:
+    Description: Name of the Lambda function that processes orders
+    Value: !Ref OrderProcessorFunction
+  OrderApiEndpoint:
+    Description: URL of the API Gateway endpoint
+    Value: !Sub "https://${OrderApi}.execute-api.${AWS::Region}.amazonaws.com/prod/checkout"
+

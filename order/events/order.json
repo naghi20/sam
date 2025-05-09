@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "Sns": {
+        "Message": "{\"order_id\": \"12345\", \"item_id\": \"A1B2C3\", \"item_count\": 2, \"item_price\": 19.99, \"total_price\": 39.98}"
+      }
+    }
+  ]
+}
+
