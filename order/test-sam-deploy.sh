@@ -1,6 +1,7 @@
 #!/bin/sh -xe
 
-API_GW_URL=https://xs2hbyrem6.execute-api.eu-west-2.amazonaws.com/prod/checkout
+# !!!!! TODO: REPLACE THE URL BELOW WITH YOUR OWN !!!!!
+API_GW_URL=https://s94g8zjkl3.execute-api.eu-west-2.amazonaws.com/prod/checkout
 
 
 curl -X POST $API_GW_URL \

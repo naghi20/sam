@@ -83,8 +83,9 @@ Resources:
                 requestParameters:
                   integration.request.header.Content-Type: "'application/x-www-form-urlencoded'"
                 requestTemplates:
-                  application/json: |
-                    Action=Publish&TopicArn=$util.urlEncode('arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${OrderTopic}')&Message=$util.urlEncode($input.body)
+                  application/json:
+                    Fn::Sub: |
+                      Action=Publish&TopicArn=$util.urlEncode('${OrderTopic}')&Message=$util.urlEncode($input.body)
                 responses:
                   default:
                     statusCode: 200
