@@ -1,6 +1,7 @@
 #!/bin/sh -xe
 
-API_GW_URL=https://vo7zktplf6.execute-api.eu-west-2.amazonaws.com/prod/checkout
+API_GW_URL=https://xs2hbyrem6.execute-api.eu-west-2.amazonaws.com/prod/checkout
+
 
 curl -X POST $API_GW_URL \
   -H "Content-Type: application/json" \

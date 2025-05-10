@@ -57,30 +57,51 @@ Resources:
       Name: OrderApi
       StageName: prod
       DefinitionBody:
-        swagger: 2.0
+        swagger: "2.0"
         info:
           title: Order Service
-          version: 1.0
+          version: "1.0"
         paths:
           /checkout:
             post:
+              consumes:
+                - application/json
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: OK
+                "500":
+                  description: Internal Server Error
               x-amazon-apigateway-integration:
                 type: aws
-                uri:
-                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:sns:action/Publish
                 httpMethod: POST
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:sns:path//
                 credentials:
                   Fn::GetAtt: ApiGatewaySnsRole.Arn
+                requestParameters:
+                  integration.request.header.Content-Type: "'application/x-www-form-urlencoded'"
                 requestTemplates:
-                  application/json:
-                    Fn::Sub: |
-                      {
-                        "TopicArn": "${OrderTopic}",
-                        "Message": "$util.escapeJavaScript($input.body)"
-                      }
+                  application/json: |
+                    Action=Publish&TopicArn=$util.urlEncode('arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${OrderTopic}')&Message=$util.urlEncode($input.body)
                 responses:
                   default:
                     statusCode: 200
+                    responseTemplates:
+                      application/json: |
+                        {
+                          "message": "SNS publish successful.",
+                          "messageId": "$input.path('$.PublishResponse.PublishResult.MessageId')"
+                        }
+                  "500":
+                    statusCode: 500
+                    responseTemplates:
+                      application/json: |
+                        {
+                          "error": "Internal server error"
+                        }
+
 
   ApiGatewaySnsRole:
     Type: AWS::IAM::Role
